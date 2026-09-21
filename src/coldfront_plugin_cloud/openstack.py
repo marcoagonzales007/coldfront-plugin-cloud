@@ -222,12 +222,10 @@ class OpenStackResourceAllocator(base.ResourceAllocator):
             # Note(knikolla): For consistency with other OpenStack
             # quotas we're storing this as GB on the attribute and
             # converting to bytes for Swift.
-            for obj_q_mapping in self._get_resource_quota_labels_by_service("object"):
-                if obj_q_mapping not in payload:
-                    continue
-                payload[obj_q_mapping] *= GB_IN_BYTES
-                if payload[obj_q_mapping] <= 0:
-                    payload[obj_q_mapping] = 1
+            obj_q_mapping = self._get_resource_quota_labels_by_service("object")[0]
+            payload[obj_q_mapping] *= GB_IN_BYTES
+            if payload[obj_q_mapping] <= 0:
+                payload[obj_q_mapping] = 1
             self.object(project_id).post_account(headers=payload)
         except ksa_exceptions.catalog.EndpointNotFound:
             logger.debug("No swift available, skipping its quota.")
@@ -291,7 +289,8 @@ class OpenStackResourceAllocator(base.ResourceAllocator):
 
         quotas = self._get_network_quota(quotas, project_id)
 
-        for key in self._get_resource_quota_labels_by_service("object"):
+        if object_labels := self._get_resource_quota_labels_by_service("object"):
+            key = object_labels[0]
             try:
                 swift = self.object(project_id).head_account()
             except ksa_exceptions.catalog.EndpointNotFound:
